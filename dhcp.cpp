@@ -10,8 +10,8 @@
 
 class Network {
 public:
-    Network(const std::string &str)
-            : password(str) {
+    explicit Network(const std::string &name, const std::string &pass, const std::string &vip_base = "177.177.0.")
+            : name(name), password(pass), vip_base(vip_base) {
     }
     std::string add_peer(const std::string &pass, const std::string &ip) {
         if (pass != password) {
@@ -19,7 +19,10 @@ public:
         }
         std::string vip = generate_vip();
         vip_table[vip] = ip;
-        create_tun(vip, ip); // подумаем-с
+
+        // create_tun(vip); <- вот это на на сервере происходит всегда с ip *.*.0.1
+        // TODO(AntonyMoes): в текущем виде функцию вынести на клиент
+
         return vip;
     }
     void remove_peer(const std::string &ip) {
@@ -27,11 +30,12 @@ public:
     }
 
 private:
+    const std::string name;
     const std::string password;
     unsigned short int MAX_NUM = 254;
     unsigned short int ip_number = 2;
     unsigned short int ip_count = 0;
-    const std::string vip_base = "177.177.0.";
+    const std::string vip_base;
     std::map<std::string, std::string> vip_table;
     std::string generate_vip() {
         if (ip_count == MAX_NUM) {
@@ -51,8 +55,11 @@ private:
 
         return vip_base + std::to_string(ip_number);
     }
-    void create_tun(const std::string &vip,const std::string &ip) {
-        //implement
+    void create_tun(const std::string &vip) {
+        std::string syscall = "./tun.sh ";
+        syscall += "tun" +           //TODO(AntonyMoes): запилить генерацию имени для интерфейса по имени сети or smth
+        syscall += vip;
+        system(syscall.c_str());
     }
 };
 
@@ -76,7 +83,7 @@ int main() {
     std::cout << std::strerror(errno);
     return -1;
   }
-  std::map<in_addr, in_addr> vip_table;
+  //std::map<in_addr, in_addr> vip_table;
 
   std::map<std::string, Network*> network_list;
 
@@ -133,16 +140,20 @@ int main() {
             std::cout << "Network creation error: network already exists." << std::endl;
             send(ss, (void *)"INC_NETWORK", sizeof("INC_NETWORK"), 0);
             close(ss);
+        } else {
+            network_list[network] = new Network(network, password);
+            std::cout << "Network \"" << network << "\" successfully created." << std::endl;
+            vip = network_list[network]->add_peer(password, ip);
+            std::cout << "Generated VIP is: " << vip << std::endl;
+            std::cout << "Returning vip to the peer." << std::endl;
+            send(ss, (void *) vip.c_str(), vip.size(), 0);
+            close(ss);
         }
-        network_list[network] = new Network(password);
-        std::cout << "Network \"" << network << "\" successfully created." << std::endl;
-        vip = network_list[network]->add_peer(password, ip);
-        std::cout << "Generated VIP is: " << vip << std::endl;
-        std::cout << "Returning vip to the peer." << std::endl;
-        send(ss, (void *)vip.c_str(), vip.size(), 0);
-        close(ss);
     }
 
     std::cout << std::endl;
   }
+
+
 }
+
