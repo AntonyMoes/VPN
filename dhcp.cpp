@@ -3,7 +3,6 @@
 #include <arpa/inet.h>
 #include <iostream>
 #include <cstring>
-//#include <zconf.h>
 #include <unistd.h>
 #include <map>
 #include <sstream>
@@ -12,6 +11,7 @@ class Network {
 public:
     explicit Network(const std::string &name, const std::string &pass, const std::string &vip_base = "177.177.0.")
             : name(name), password(pass), vip_base(vip_base) {
+        create_tun(vip_base + std::to_string(1));  // создание игнтерфейса под сеть
     }
     std::string add_peer(const std::string &pass, const std::string &ip) {
         if (pass != password) {
@@ -19,9 +19,6 @@ public:
         }
         std::string vip = generate_vip();
         vip_table[vip] = ip;
-
-        // create_tun(vip); <- вот это на на сервере происходит всегда с ip *.*.0.1
-        // TODO(AntonyMoes): в текущем виде функцию вынести на клиент
 
         return vip;
     }
@@ -57,7 +54,7 @@ private:
     }
     void create_tun(const std::string &vip) {
         std::string syscall = "./tun.sh ";
-        syscall += "tun" +           //TODO(AntonyMoes): запилить генерацию имени для интерфейса по имени сети or smth
+        syscall += name + " ";
         syscall += vip;
         system(syscall.c_str());
     }
@@ -65,7 +62,6 @@ private:
 
 int main() {
   int s = socket(AF_INET, SOCK_STREAM, 0);
-
   in_addr in;
   int res = inet_aton("0.0.0.0", &in);
   if (!res) {
