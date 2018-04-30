@@ -5,8 +5,8 @@ int cread(int fd, char *buf, int n){
  int nread;
 
  if((nread=read(fd, buf, n)) < 0 && errno != EAGAIN){
-   perror("Reading data");
-   exit(1);
+   //perror("Reading data");
+   //exit(1);
  }
  return nread;
 }
