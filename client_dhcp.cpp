@@ -9,6 +9,7 @@
 
 const char *SERVER_ADDR = "192.168.1.58";  // mb std::string
 const int SERVER_PORT = 12345;
+const int BUFF_SIZE = 4* 256;
 
 void create_tun(const std::string &vip) {
     std::string syscall = "./tun.sh ";
@@ -53,8 +54,8 @@ int main() {
     connect(s, (sockaddr*) &sockaddr_, sizeof(sockaddr_));
     send(s, (void *)request.c_str(), sizeof(request.c_str()), 0);
 
-    char buff[4 * 1024];
-    int recv_bytes = recv(s, buff, 4 * 1024, 0);
+    char buff[BUFF_SIZE];
+    int recv_bytes = recv(s, buff, BUFF_SIZE, 0);
     std::stringstream dhcp_input(buff);
 
     std::string vip;
