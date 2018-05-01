@@ -6,12 +6,12 @@
 #include <unistd.h>
 #include <map>
 #include <sstream>
+#include "dhcp_errors.h"
 
 class Network {
 public:
     explicit Network(const std::string &name, const std::string &pass, const std::string &vip_base = "177.177.0.")
             : name(name), password(pass), vip_base(vip_base) {
-        create_tun(vip_base + std::to_string(1));  // создание игнтерфейса под сеть
     }
     std::string add_peer(const std::string &pass, const std::string &ip) {
         if (pass != password) {
@@ -20,10 +20,14 @@ public:
         std::string vip = generate_vip();
         vip_table[vip] = ip;
 
+        //open_connection(ip);         // вызов функции/еще чего из части с неблокирующими сокетами
+
         return vip;
     }
     void remove_peer(const std::string &ip) {
-        //implement
+        //close_connection(ip);
+
+        // напишу, когда согласуем архитектуру
     }
 
 private:
@@ -33,10 +37,10 @@ private:
     unsigned short int ip_number = 2;
     unsigned short int ip_count = 0;
     const std::string vip_base;
-    std::map<std::string, std::string> vip_table;
+    std::map<std::string, std::string> vip_table;   // после подключения multiclient будет во втором поле хранить дескрипторы
     std::string generate_vip() {
         if (ip_count == MAX_NUM) {
-            return "";
+            return "NET_FULL";
         }
 
         while (!vip_table[vip_base  + std::to_string(ip_number)].empty()) {
@@ -51,12 +55,6 @@ private:
         ip_count++;
 
         return vip_base + std::to_string(ip_number);
-    }
-    void create_tun(const std::string &vip) {
-        std::string syscall = "./tun.sh ";
-        syscall += name + " ";
-        syscall += vip;
-        system(syscall.c_str());
     }
 };
 
@@ -79,11 +77,13 @@ int main() {
     std::cout << std::strerror(errno);
     return -1;
   }
-  //std::map<in_addr, in_addr> vip_table;
 
   std::map<std::string, Network*> network_list;
 
   listen(s, 2);
+
+  unsigned short int net_number = 170;  // чтобы ip создаваемых сетей различались
+                                        // пока что выход за 255 не обрабатывается
 
   while (true) {
     sockaddr_in  peer_addr;
@@ -115,29 +115,35 @@ int main() {
         if(network_list.find(network) != network_list.end()) {
             vip = network_list[network]->add_peer(password, ip);
             if(!vip.empty()) {
-                std::cout << "Peer successfully added." << std::endl;
-                std::cout << "Generated VIP is: " << vip << std::endl;
-                std::cout << "Returning vip to the peer." << std::endl;
-                send(ss, (void *)vip.c_str(), vip.size(), 0);
-                close(ss);
+                if (vip == "NET_FULL") {
+                    std::cout << "Connection error: network is full." << std::endl;
+                    send(ss, (void *)NET_FULL, sizeof(NET_FULL), 0);
+                    close(ss);
+                } else {
+                    std::cout << "Peer successfully added." << std::endl;
+                    std::cout << "Generated VIP is: " << vip << std::endl;
+                    std::cout << "Returning vip to the peer." << std::endl;
+                    send(ss, (void *) vip.c_str(), vip.size(), 0);
+                    close(ss);
+                }
             } else {
                 std::cout << "Connection error: password incorrect." << std::endl;
-                send(ss, (void *)"INC_PASSWD", sizeof("INC_PASSWD"), 0);
+                send(ss, (void *)PASSWD_INC, sizeof(PASSWD_INC), 0);
                 close(ss);
             }
         } else {
             std::cout << "Connection error: network doesn't exist." << std::endl;
-            send(ss, (void *)"INC_NETWORK", sizeof("INC_NETWORK"), 0);
+            send(ss, (void *)NET_NAME_INC, sizeof(NET_NAME_INC), 0);
             close(ss);
         }
     } else {
         std::cout << "Peer requests network creation." << std::endl;
         if(network_list.find(network) != network_list.end()) {
             std::cout << "Network creation error: network already exists." << std::endl;
-            send(ss, (void *)"INC_NETWORK", sizeof("INC_NETWORK"), 0);
+            send(ss, (void *)NET_NAME_TAKEN, sizeof(NET_NAME_TAKEN), 0);
             close(ss);
         } else {
-            network_list[network] = new Network(network, password);
+            network_list[network] = new Network(network, password, "170." + std::to_string(net_number++) + ".0.");
             std::cout << "Network \"" << network << "\" successfully created." << std::endl;
             vip = network_list[network]->add_peer(password, ip);
             std::cout << "Generated VIP is: " << vip << std::endl;
