@@ -20,9 +20,9 @@
  * explicit. See the file LICENSE for further details.                    *
  *************************************************************************/ 
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
 #include <unistd.h>
 #include <net/if.h>
 #include <linux/if_tun.h>
@@ -34,8 +34,9 @@
 #include <arpa/inet.h> 
 #include <sys/select.h>
 #include <sys/time.h>
-#include <errno.h>
-#include <stdarg.h>
+#include <cerrno>
+#include <cstdarg>
+#include <string>
 
 /* buffer for reading from tun/tap interface, must be >= 1500 */
 #define BUFSIZE 2000   
@@ -43,18 +44,18 @@
 #define SERVER 1
 #define PORT 55555
 
-int debug;
+int debug = 0;
 char *progname;
 
 /**************************************************************************
  * tun_alloc: allocates or reconnects to a tun/tap device. The caller     *
  *            must reserve enough space in *dev.                          *
  **************************************************************************/
-int tun_alloc(char *dev, int flags) {
+int tun_alloc(std::string &dev, int flags) {
 
   struct ifreq ifr;
   int fd, err;
-  char *clonedev = "/dev/net/tun";
+  const char *clonedev = "/dev/net/tun";
 
   if( (fd = open(clonedev , O_RDWR)) < 0 ) {
     perror("Opening /dev/net/tun");
@@ -65,8 +66,8 @@ int tun_alloc(char *dev, int flags) {
 
   ifr.ifr_flags = flags;
 
-  if (*dev) {
-    strncpy(ifr.ifr_name, dev, IFNAMSIZ);
+  if (!dev.empty()) {
+    strncpy(ifr.ifr_name, dev.c_str(), IFNAMSIZ);
   }
 
   if( (err = ioctl(fd, TUNSETIFF, (void *)&ifr)) < 0 ) {
@@ -75,7 +76,8 @@ int tun_alloc(char *dev, int flags) {
     return err;
   }
 
-  strcpy(dev, ifr.ifr_name);
+  //strcpy(dev, ifr.ifr_name);
+  dev = ifr.ifr_name;
 
   return fd;
 }
@@ -132,7 +134,7 @@ int read_n(int fd, char *buf, int n) {
 /**************************************************************************
  * do_debug: prints debugging stuff (doh!)                                *
  **************************************************************************/
-void do_debug(char *msg, ...){
+void do_debug(const char *msg, ...){
   
   va_list argp;
   
@@ -146,7 +148,7 @@ void do_debug(char *msg, ...){
 /**************************************************************************
  * my_err: prints custom error messages on stderr.                        *
  **************************************************************************/
-void my_err(char *msg, ...) {
+void my_err(const char *msg, ...) {
 
   va_list argp;
   
@@ -172,76 +174,22 @@ void usage(void) {
   exit(1);
 }
 
-int main(int argc, char *argv[]) {
+int connect_to_server(const std::string &ifname, const std::string &remote_ip) {
   
   int tap_fd, option;
   int flags = IFF_TUN;
-  char if_name[IFNAMSIZ] = "";
+  //char if_name[IFNAMSIZ] = "";
+  std::string if_name = if_name;
   int maxfd;
   uint16_t nread, nwrite, plength;
   char buffer[BUFSIZE];
-  struct sockaddr_in local, remote;
-  char remote_ip[16] = "";            /* dotted quad IP string */
+  sockaddr_in local, remote;
+  //char remote_ip[16] = "";            /* dotted quad IP string */
   unsigned short int port = PORT;
   int sock_fd, net_fd, optval = 1;
   socklen_t remotelen;
-  int cliserv = -1;    /* must be specified on cmd line */
+  //int cliserv = -1;    /* must be specified on cmd line */
   unsigned long int tap2net = 0, net2tap = 0;
-
-  progname = argv[0];
-  
-  /* Check command line options */
-  while((option = getopt(argc, argv, "i:sc:p:uahd")) > 0) {
-    switch(option) {
-      case 'd':
-        debug = 1;
-        break;
-      case 'h':
-        usage();
-        break;
-      case 'i':
-        strncpy(if_name,optarg, IFNAMSIZ-1);
-        break;
-      case 's':
-        cliserv = SERVER;
-        break;
-      case 'c':
-        cliserv = CLIENT;
-        strncpy(remote_ip,optarg,15);
-        break;
-      case 'p':
-        port = atoi(optarg);
-        break;
-      case 'u':
-        flags = IFF_TUN;
-        break;
-      case 'a':
-        flags = IFF_TAP;
-        break;
-      default:
-        my_err("Unknown option %c\n", option);
-        usage();
-    }
-  }
-
-  argv += optind;
-  argc -= optind;
-
-  if(argc > 0) {
-    my_err("Too many options!\n");
-    usage();
-  }
-
-  if(*if_name == '\0') {
-    my_err("Must specify interface name!\n");
-    usage();
-  } else if(cliserv < 0) {
-    my_err("Must specify client or server mode!\n");
-    usage();
-  } else if((cliserv == CLIENT)&&(*remote_ip == '\0')) {
-    my_err("Must specify server address!\n");
-    usage();
-  }
 
   /* initialize tun/tap interface */
   if ( (tap_fd = tun_alloc(if_name, flags | IFF_NO_PI)) < 0 ) {
@@ -256,13 +204,13 @@ int main(int argc, char *argv[]) {
     exit(1);
   }
 
-  if(cliserv == CLIENT) {
+
     /* Client, try to connect to server */
 
     /* assign the destination address */
     memset(&remote, 0, sizeof(remote));
     remote.sin_family = AF_INET;
-    remote.sin_addr.s_addr = inet_addr(remote_ip);
+    remote.sin_addr.s_addr = inet_addr(remote_ip.c_str());
     remote.sin_port = htons(port);
 
     /* connection request */
@@ -274,44 +222,13 @@ int main(int argc, char *argv[]) {
     net_fd = sock_fd;
     do_debug("CLIENT: Connected to server %s\n", inet_ntoa(remote.sin_addr));
     
-  } else {
-    /* Server, wait for connections */
 
-    /* avoid EADDRINUSE error on bind() */
-    if(setsockopt(sock_fd, SOL_SOCKET, SO_REUSEADDR, (char *)&optval, sizeof(optval)) < 0) {
-      perror("setsockopt()");
-      exit(1);
-    }
-    
-    memset(&local, 0, sizeof(local));
-    local.sin_family = AF_INET;
-    local.sin_addr.s_addr = htonl(INADDR_ANY);
-    local.sin_port = htons(port);
-    if (bind(sock_fd, (struct sockaddr*) &local, sizeof(local)) < 0) {
-      perror("bind()");
-      exit(1);
-    }
-    
-    if (listen(sock_fd, 5) < 0) {
-      perror("listen()");
-      exit(1);
-    }
-    
-    /* wait for connection request */
-    remotelen = sizeof(remote);
-    memset(&remote, 0, remotelen);
-    if ((net_fd = accept(sock_fd, (struct sockaddr*)&remote, &remotelen)) < 0) {
-      perror("accept()");
-      exit(1);
-    }
 
-    do_debug("SERVER: Client connected from %s\n", inet_ntoa(remote.sin_addr));
-  }
   
   /* use select() to handle two descriptors at once */
   maxfd = (tap_fd > net_fd)?tap_fd:net_fd;
 
-  while(1) {
+  while(true) {
     int ret;
     fd_set rd_set;
 

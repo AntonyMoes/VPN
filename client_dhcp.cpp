@@ -11,6 +11,8 @@ const char *SERVER_ADDR = "192.168.1.58";  // mb std::string
 const int SERVER_PORT = 12345;
 const int BUFF_SIZE = 4* 256;
 
+int connect_to_server(const std::string &ifname, const std::string &remote_ip);
+
 void create_tun(const std::string &vip) {
     std::string syscall = "./tun.sh ";
     syscall += "vpn_tun";
@@ -72,6 +74,9 @@ int main() {
 
 
     //вызов симплтана
+    connect_to_server("vpn_tun", SERVER_ADDR);
+
+
 
     return 0;
 }
