@@ -109,7 +109,9 @@ int main() {
     input.clear();
 
     std::string vip;
-    if(request_type == "connect") {
+    if(request_type == "shutdown") {
+        break;
+    } else if(request_type == "connect") {
         std::cout << "Peer requests connection." << std::endl;
         std::cout << "Trying to connect to \"" << network << "\" network..." << std::endl;
         if(network_list.find(network) != network_list.end()) {
@@ -117,7 +119,7 @@ int main() {
             if(!vip.empty()) {
                 if (vip == "NET_FULL") {
                     std::cout << "Connection error: network is full." << std::endl;
-                    send(ss, (void *)NET_FULL, sizeof(NET_FULL), 0);
+                    send(ss, (void *)NET_FULL, strlen(NET_FULL), 0);
                     close(ss);
                 } else {
                     std::cout << "Peer successfully added." << std::endl;
@@ -128,19 +130,19 @@ int main() {
                 }
             } else {
                 std::cout << "Connection error: password incorrect." << std::endl;
-                send(ss, (void *)PASSWD_INC, sizeof(PASSWD_INC), 0);
+                send(ss, (void *)PASSWD_INC, strlen(PASSWD_INC), 0);
                 close(ss);
             }
         } else {
             std::cout << "Connection error: network doesn't exist." << std::endl;
-            send(ss, (void *)NET_NAME_INC, sizeof(NET_NAME_INC), 0);
+            send(ss, (void *)NET_NAME_INC, strlen(NET_NAME_INC), 0);
             close(ss);
         }
     } else {
         std::cout << "Peer requests network creation." << std::endl;
         if(network_list.find(network) != network_list.end()) {
             std::cout << "Network creation error: network already exists." << std::endl;
-            send(ss, (void *)NET_NAME_TAKEN, sizeof(NET_NAME_TAKEN), 0);
+            send(ss, (void *)NET_NAME_TAKEN, strlen(NET_NAME_TAKEN), 0);
             close(ss);
         } else {
             network_list[network] = new Network(network, password, "170." + std::to_string(net_number++) + ".0.");
@@ -156,6 +158,9 @@ int main() {
     std::cout << std::endl;
   }
 
+  for (auto iter: network_list) {
+      delete iter.second;
+  }
 
 }
 
