@@ -7,15 +7,15 @@
 #include <map>
 #include <sstream>
 
-const char *SERVER_ADDR = "192.168.1.58";  // mb std::string
+const char *SERVER_ADDR = "192.168.1.249";  // mb std::string
 const int SERVER_PORT = 12345;
-const int BUFF_SIZE = 4* 256;
+const int BUFF_SIZE = 4* 1024;
 
 int connect_to_server(const std::string &ifname, const std::string &remote_ip);
 
 void create_tun(const std::string &vip) {
     std::string syscall = "./tun.sh ";
-    syscall += "vpn_tun";
+    syscall += "vpn_tun ";
     syscall += " ";
     syscall += vip;
     system(syscall.c_str());
@@ -35,11 +35,7 @@ int main() {
             .sin_addr = in
     };
 
-    res = bind(s, (sockaddr*) &sockaddr_, sizeof(sockaddr_));
-    if (res) {
-        std::cout << std::strerror(errno);
-        return -1;
-    }
+
 
     // Формирование запроса
     // -----------------------------------------
@@ -54,7 +50,7 @@ int main() {
     // -----------------------------------------
 
     connect(s, (sockaddr*) &sockaddr_, sizeof(sockaddr_));
-    send(s, (void *)request.c_str(), sizeof(request.c_str()), 0);
+    send(s, (void *)request.c_str(), strlen(request.c_str()), 0);
 
     char buff[BUFF_SIZE];
     int recv_bytes = recv(s, buff, BUFF_SIZE, 0);
