@@ -1,6 +1,5 @@
 #include <net/if.h>
-#include "rwr.hpp"
-#include <string.h>
+#include "../include/rwr.hpp"
 #include <linux/if_tun.h>
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -12,12 +11,10 @@
 #include <sys/time.h>
 #include <set>
 #include <algorithm>
-#include "nonblock.hpp"
+#include "../include/nonblock.hpp"
 
 /* buffer for reading from tun/tap interface, must be >= 1500 */
 #define BUFSIZE 1500
-#define CLIENT 0
-#define SERVER 1
 #define PORT 55555
 
 int debug;
@@ -29,12 +26,11 @@ int main(int argc, char *argv[]) {
     int flags = IFF_TUN;
     char if_name[IFNAMSIZ] = "";
     char buffer[BUFSIZE];
-    struct sockaddr_in local, remote;
+    sockaddr_in local, remote;
     char remote_ip[16] = "";            /* dotted quad IP string */
     unsigned short int port = PORT;
     int sock_fd, net_fd, optval = 1;
     socklen_t remotelen;
-    int cliserv = -1;    /* must be specified on cmd line */
     unsigned long int tap2net = 0, net2tap = 0;
 
     progname = argv[0];

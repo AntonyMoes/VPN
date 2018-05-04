@@ -1,6 +1,6 @@
 #ifndef INCLUDE_RWR_HPP_
 #define INCLUDE_RWR_HPP_
-
+#include <errno.h>
 #include <unistd.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -22,7 +22,7 @@ int read_n(int fd, char *buf, int n);
 /**************************************************************************
 * do_debug: prints debugging stuff (doh!)                                *
 **************************************************************************/
-void do_debug(char *msg, int debug, ...);
+void do_debug(int debug, char *msg, ...);
 
 /**************************************************************************
 * my_err: prints custom error messages on stderr.                        *

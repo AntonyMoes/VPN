@@ -7,8 +7,8 @@
 #include <string.h>
 #include <set>
 #include <algorithm>
-#include "rwr.hpp"
-#include "nonblock.hpp"
+#include "../include/rwr.hpp"
+#include "../include/nonblock.hpp"
 
 
 void serve(int sock_fd, sockaddr_in local, int debug, int port, sockaddr_in remote, socklen_t remotelen) {
@@ -37,8 +37,9 @@ void serve(int sock_fd, sockaddr_in local, int debug, int port, sockaddr_in remo
          fd_set readset;
          FD_ZERO(&readset);
          FD_SET(sock_fd, &readset);
-         for(std::set<int>::iterator it = clients.begin(); it != clients.end(); it++)
-         FD_SET(*it, &readset);
+         for(auto it: clients) {
+             FD_SET(it, &readset);
+         }
          timeval timeout;
          timeout.tv_sec = 15;
          timeout.tv_usec = 0;
