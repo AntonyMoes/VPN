@@ -6,18 +6,28 @@
 #include <unistd.h>
 #include <map>
 #include <sstream>
+#include <thread>
 
-const char *SERVER_ADDR = "192.168.1.249";  // mb std::string
+
+const char *SERVER_ADDR = "185.17.122.182";  // mb std::string
 const int SERVER_PORT = 12345;
 const int BUFF_SIZE = 4* 1024;
+const char *tun_name = "vpn_tun";
+bool shut = false;
 
 int connect_to_server(const std::string &ifname, const std::string &remote_ip);
 
 void create_tun(const std::string &vip) {
     std::string syscall = "./tun.sh ";
-    syscall += "vpn_tun ";
+    syscall += tun_name;
     syscall += " ";
     syscall += vip;
+    system(syscall.c_str()); // system("./tun.sh vpn_tun 170.170.02")
+}
+
+void delete_tun() {
+    std::string syscall = "./tun_del.sh ";
+    syscall += tun_name;
     system(syscall.c_str());
 }
 
@@ -43,11 +53,20 @@ int main() {
     std::string request_type;
     std::string net_name;
     std::string net_pass;
-    std::cin >> request_type >> net_name >> net_pass;  // пока пусть будет так
 
+    std::cin >> request_type;
+    if(request_type == "shutdown" || request_type == "disconnect") {
+        connect(s, (sockaddr*) &sockaddr_, sizeof(sockaddr_));
+        send(s, (void *)request_type.c_str(), strlen(request_type.c_str()), 0);
+        return 0;
+    }
+
+    std::cin >> net_name >> net_pass;  // пока пусть будет так
     std::string request = request_type + " " + net_name + " " + net_pass;
 
     // -----------------------------------------
+
+
 
     connect(s, (sockaddr*) &sockaddr_, sizeof(sockaddr_));
     send(s, (void *)request.c_str(), strlen(request.c_str()), 0);
@@ -58,6 +77,9 @@ int main() {
 
     std::string vip;
     dhcp_input >> vip;
+
+    std::cout << buff << std::endl;
+
     if (vip == "ERR") {
         std::string error_type;
         dhcp_input >> error_type;
@@ -70,9 +92,17 @@ int main() {
 
 
     //вызов симплтана
+    //std::thread th(connect_to_server,"vpn_tun", SERVER_ADDR);
+
+    //std::cin >> request_type;
     connect_to_server("vpn_tun", SERVER_ADDR);
+    //connect(s, (sockaddr*) &sockaddr_, sizeof(sockaddr_));
+    //send(s, (void *)"disconnect", strlen("disconnect"), 0);
 
+    //shut = true;
+    //th.join();
 
+    delete_tun();
 
     return 0;
 }

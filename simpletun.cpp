@@ -37,6 +37,7 @@
 #include <cerrno>
 #include <cstdarg>
 #include <string>
+#include <iostream>
 
 /* buffer for reading from tun/tap interface, must be >= 1500 */
 #define BUFSIZE 2000   
@@ -179,7 +180,7 @@ int connect_to_server(const std::string &ifname, const std::string &remote_ip) {
   int tap_fd, option;
   int flags = IFF_TUN;
   //char if_name[IFNAMSIZ] = "";
-  std::string if_name = if_name;
+  std::string if_name = ifname;
   int maxfd;
   uint16_t nread, nwrite, plength;
   char buffer[BUFSIZE];
@@ -221,6 +222,7 @@ int connect_to_server(const std::string &ifname, const std::string &remote_ip) {
 
     net_fd = sock_fd;
     do_debug("CLIENT: Connected to server %s\n", inet_ntoa(remote.sin_addr));
+    //std::cout << "CLIENT: Connected to server " << inet_ntoa(remote.sin_addr) << std::endl;
     
 
 
@@ -253,6 +255,7 @@ int connect_to_server(const std::string &ifname, const std::string &remote_ip) {
 
       tap2net++;
       do_debug("TAP2NET %lu: Read %d bytes from the tap interface\n", tap2net, nread);
+      //std::cout << "TAP2NET "<< tap2net <<": Read " << nread << " bytes from the tap interface\n";
 
       /* write length + packet */
       plength = htons(nread);
@@ -260,6 +263,7 @@ int connect_to_server(const std::string &ifname, const std::string &remote_ip) {
       nwrite = cwrite(net_fd, buffer, nread);
       
       do_debug("TAP2NET %lu: Written %d bytes to the network\n", tap2net, nwrite);
+      //std::cout << "TAP2NET "<< tap2net <<": Written " << nwrite << " bytes to the network\n";
     }
 
     if(FD_ISSET(net_fd, &rd_set)) {
@@ -278,10 +282,12 @@ int connect_to_server(const std::string &ifname, const std::string &remote_ip) {
       /* read packet */
       nread = read_n(net_fd, buffer, ntohs(plength));
       do_debug("NET2TAP %lu: Read %d bytes from the network\n", net2tap, nread);
+      //std::cout << "TAP2NET "<< net2tap <<": Read " << nread << " bytes from the network\n";
 
       /* now buffer[] contains a full packet or frame, write it into the tun/tap interface */ 
       nwrite = cwrite(tap_fd, buffer, nread);
       do_debug("NET2TAP %lu: Written %d bytes to the tap interface\n", net2tap, nwrite);
+      //std::cout << "TAP2NET "<< net2tap <<": Written " << nwrite << " bytes to the tap interface\n";
     }
   }
   
