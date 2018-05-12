@@ -1,13 +1,19 @@
+#include <iostream>
 #include "../include/rwr.hpp"
 
 int cread(int fd, char *buf, int n){
 
     int nread;
 
-    if((nread=read(fd, buf, n)) < 0 && errno != EAGAIN){
-        //perror("Reading data");
-        //exit(1);
+    // -----------------------------------------------------------
+
+
+    while ((nread=read(fd, buf, n)) < 0) {
+        // Let's wait for the socket to become free to read :^)
     }
+
+    // -----------------------------------------------------------
+
     return nread;
 }
 
@@ -31,8 +37,7 @@ int cwrite(int fd, char *buf, int n){
 *         (unless EOF, of course)                                        *
 **************************************************************************/
 int read_n(int fd, char *buf, int n) {
-
-    int nread, left = n;
+    int nread = 0, left = n;
 
     while(left > 0) {
         if ((nread = cread(fd, buf, left)) == 0){

@@ -13,7 +13,10 @@ public:
             : name(name), password(pass), vip_base(vip_base) {
     }
     std::string add_peer(const std::string &pass, const std::string &ip);
-    void remove_peer(const std::string &ip);
+    bool try_connect_peer(const std::string &ip, int fd);
+    bool try_reroute_package(const std::string &vip, char *buffer, int size);
+    bool remove_peer(const std::string &ip);
+    std::string get_base_vip();
 
 private:
     const std::string name;
