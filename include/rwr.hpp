@@ -1,10 +1,10 @@
 #ifndef INCLUDE_RWR_HPP_
 #define INCLUDE_RWR_HPP_
-#include <errno.h>
+#include <cerrno>
 #include <unistd.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <stdarg.h>
+#include <cstdio>
+#include <cstdlib>
+#include <cstdarg>
 int cread(int fd, char *buf, int n);
 
 /**************************************************************************
@@ -28,8 +28,6 @@ void do_debug(int debug, char *msg, ...);
 * my_err: prints custom error messages on stderr.                        *
 **************************************************************************/
 void my_err(char *msg, ...);
-
-void usage(char *progname);
 
 
 

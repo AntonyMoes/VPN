@@ -26,7 +26,9 @@
 #include "../include/dhcp_errors.h"
 #include "../include/Network.h"
 
+#define DHCP_BUFSIZE 4096
 #define BUFSIZE 20000
+#define DHCP_PORT 12345
 #define PORT 55555
 
 int debug = 1;
@@ -37,11 +39,6 @@ std::map<std::string, Network*> network_list;
 std::set<int> clients;
 
 int foo() {
-
-    //DHCP_SETUP
-
-
-
     int dhcp_s = socket(AF_INET, SOCK_STREAM, 0);
     in_addr in;
     int res = inet_aton("0.0.0.0", &in);
@@ -51,7 +48,7 @@ int foo() {
 
     sockaddr_in sockaddr_ = {
             .sin_family = AF_INET,
-            .sin_port = htons(12345),
+            .sin_port = htons(DHCP_PORT),
             .sin_addr = in
     };
 
@@ -61,41 +58,31 @@ int foo() {
         return -1;
     }
 
-    //std::map<std::string, Network*> network_list;
-
     listen(dhcp_s, 5);
 
     unsigned short int net_number = 170;  // чтобы ip создаваемых сетей различались
     // пока что выход за 255 не обрабатывается
 
-
     sockaddr_in  peer_addr;
     socklen_t peer_addr_size;
     while(true)  {
-
-
         int ss = accept(dhcp_s, (struct sockaddr *)  &peer_addr, &peer_addr_size);
 
-
-        //char str[INET_ADDRSTRLEN];
-        //inet_ntop( AF_INET, &peer_addr, str, INET_ADDRSTRLEN );
         std::string ip = inet_ntoa(peer_addr.sin_addr);
 
         std::cout << "Recieved request from " << ip << std::endl;
 
-        char buff[4 * 1024];
+        char buff[DHCP_BUFSIZE];
         for(auto &iter: buff) {
             iter = '\0';
         }
-        int recv_bytes = recv(ss, buff, 4 * 1024, 0);
+        recv(ss, buff, DHCP_BUFSIZE, 0);
         std::stringstream input(buff);
         std::string request_type;
         std::string network;
         std::string password;
 
-
         input >> request_type;
-
 
         std::string vip;
         if (request_type == "shutdown") {
@@ -163,32 +150,18 @@ int foo() {
         input.clear();
     }
 
-
-
     for (auto iter: network_list) {
         delete iter.second;
     }
-
-
-
-
-
-
-
 }
 
 int main() {
-    int block = 0;
-    int tap_fd, option;
-    int flags = IFF_TUN;
-    char if_name[IFNAMSIZ] = "";
     char buffer[BUFSIZE];
     sockaddr_in local, remote;
-    char remote_ip[16] = "";            /* dotted quad IP string */
     unsigned short int port = PORT;
     int sock_fd, optval = 1;
     socklen_t remotelen;
-    unsigned long int tap2net = 0, net2tap = 0;
+    unsigned long int tap2net = 0;
 
     if ( (sock_fd = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
         perror("socket()");
@@ -217,13 +190,11 @@ int main() {
         exit(1);
     }
 
-
     clients.clear();
 
 
     std::thread th(foo);
 
-    //CYCLE
 
     while(!shut){
         /* wait for connection request */
@@ -236,16 +207,6 @@ int main() {
         for(auto it: clients) {
             FD_SET(it, &readset);
         }
-
-
-
-
-
-
-
-        timeval timeout;
-        timeout.tv_sec = 15;
-        timeout.tv_usec = 0;
 
         int mx;
         if (clients.size() > 0) {
@@ -261,10 +222,6 @@ int main() {
         }
 
 
-
-
-
-        //std::cout << "check_isset sock\n";
         if(FD_ISSET(sock_fd, &readset)) {
 
             if ((net_fd = accept(sock_fd, (struct sockaddr*)&remote, &remotelen)) < 0) {
@@ -282,37 +239,19 @@ int main() {
                 }
             }
 
-
-
             clients.insert(net_fd);
         }
-        //do_debug(debug, (char*)"clients: %i\n", clients.size());
-        //std::cout << "check_isset\n";
         for(auto it: clients) {
             if(FD_ISSET(it, &readset)) {
-                //do_debug(debug, (char*)"clients: %i\n", clients.size());
-                //for (auto &buf_it: buffer) {
-                //    buf_it = '\0';
-                //}
-
-                //std::cout << "if_isset" << it << "\n";
                 nread = read_n(it, (char *)&plength, sizeof(plength));
                 if(nread == 0) {
                     /* ctrl-c at the other end */
                     break;
                 }
-                //std::cout << "nread passed\n";
-                //std::cout << "plength is: " << plength << std::endl;
-                //std::cout << "ntohs(plength)is: " << ntohs(plength) << std::endl;
-                //std::cout << "nread is: " << nread << std::endl;
-
                 tap2net++;
 
                 /* read packet */
                 nread = read_n(it, (char *)buffer, ntohs(plength));
-
-                //std::cout << "packet read\n";
-                //do_debug("NET2TAP %lu: Read %d bytes from the network\n", net2tap, nread);
                 std::cout << "TAP2NET "<< tap2net <<": Read " << nread << " bytes from the network" << it << "\n";
                 std::string destination = std::to_string((int(buffer[16]) + 256) % 256) + "." + std::to_string((int(buffer[17]) + 256) % 256) +"." + std::to_string((int(buffer[18]) + 256) % 256) + "." + std::to_string((int(buffer[19]) + 256) % 256);
                 std::cout << "destination: " << destination << std::endl;
@@ -324,44 +263,17 @@ int main() {
                         break;
                     }
                 }
-
-
-                /*
-                if (destination == "170.170.0.3" && clients.size() > 1) {
-                    plength = htons(nread);
-                    nwrite = cwrite(clients[1], (char *) &plength, sizeof(plength));
-                    nwrite = cwrite(clients[1], buffer, nread);
-                }
-
-                if (destination == "170.170.0.2" && clients.size() > 1) {
-                    plength = htons(nread);
-                    nwrite = cwrite(clients[0], (char *) &plength, sizeof(plength));
-                    nwrite = cwrite(clients[0], buffer, nread);
-                }
-
-                //do_debug("TAP2NET %lu: Written %d bytes to the network\n", tap2net, nwrite);
-                std::cout << "TAP2NET "<< tap2net <<": Written " << nwrite << " bytes to the network\n";
-                 */
-
             }
         }
-        //std::cout << "check_isset done\n";
     }
 
     th.join();
 
-
-
-    // END
-
-    //do_debug(debug, (char*)"clients: %i\n", clients.size());
-
     close(sock_fd);
+
     for(auto it: clients) {
         close(it);
     }
-
-
 
     return 0;
 }

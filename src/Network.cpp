@@ -41,10 +41,6 @@ std::string Network::add_peer(const std::string &pass, const std::string &ip) {
     return vip;
 }
 
-std::string Network::get_base_vip() {
-    return  vip_base;
-}
-
 bool Network::try_connect_peer(const std::string &ip, int fd) {
     for (const auto &iter: vip_table) {
         if(ip == iter.second) {

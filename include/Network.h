@@ -9,14 +9,13 @@
 
 class Network {
 public:
-    explicit Network(const std::string &name, const std::string &pass, const std::string &vip_base = "177.177.0.")
+    explicit Network(const std::string &name, const std::string &pass, const std::string &vip_base)
             : name(name), password(pass), vip_base(vip_base) {
     }
     std::string add_peer(const std::string &pass, const std::string &ip);
     bool try_connect_peer(const std::string &ip, int fd);
     bool try_reroute_package(const std::string &vip, char *buffer, int size);
     bool remove_peer(const std::string &ip);
-    std::string get_base_vip();
 
 private:
     const std::string name;
