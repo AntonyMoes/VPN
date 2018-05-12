@@ -40,13 +40,13 @@
 #include <iostream>
 
 /* buffer for reading from tun/tap interface, must be >= 1500 */
-#define BUFSIZE 2000   
-#define CLIENT 0
-#define SERVER 1
+#define BUFSIZE 2000
 #define PORT 55555
 
 int debug = 0;
 char *progname;
+int sock_fd;
+int tap_fd;
 
 /**************************************************************************
  * tun_alloc: allocates or reconnects to a tun/tap device. The caller     *
@@ -176,20 +176,13 @@ void usage(void) {
 }
 
 int connect_to_server(const std::string &ifname, const std::string &remote_ip) {
-  
-  int tap_fd, option;
   int flags = IFF_TUN;
-  //char if_name[IFNAMSIZ] = "";
   std::string if_name = ifname;
   int maxfd;
   uint16_t nread, nwrite, plength;
   char buffer[BUFSIZE];
-  sockaddr_in local, remote;
-  //char remote_ip[16] = "";            /* dotted quad IP string */
+  sockaddr_in remote;
   unsigned short int port = PORT;
-  int sock_fd, net_fd, optval = 1;
-  socklen_t remotelen;
-  //int cliserv = -1;    /* must be specified on cmd line */
   unsigned long int tap2net = 0, net2tap = 0;
 
   /* initialize tun/tap interface */
@@ -220,13 +213,9 @@ int connect_to_server(const std::string &ifname, const std::string &remote_ip) {
       exit(1);
     }
 
-    net_fd = sock_fd;
+    int net_fd = sock_fd;
     do_debug("CLIENT: Connected to server %s\n", inet_ntoa(remote.sin_addr));
-    //std::cout << "CLIENT: Connected to server " << inet_ntoa(remote.sin_addr) << std::endl;
-    
 
-
-  
   /* use select() to handle two descriptors at once */
   maxfd = (tap_fd > net_fd)?tap_fd:net_fd;
 
@@ -255,7 +244,6 @@ int connect_to_server(const std::string &ifname, const std::string &remote_ip) {
 
       tap2net++;
       do_debug("TAP2NET %lu: Read %d bytes from the tap interface\n", tap2net, nread);
-      //std::cout << "TAP2NET "<< tap2net <<": Read " << nread << " bytes from the tap interface\n";
 
       /* write length + packet */
       plength = htons(nread);
@@ -263,7 +251,6 @@ int connect_to_server(const std::string &ifname, const std::string &remote_ip) {
       nwrite = cwrite(net_fd, buffer, nread);
       
       do_debug("TAP2NET %lu: Written %d bytes to the network\n", tap2net, nwrite);
-      //std::cout << "TAP2NET "<< tap2net <<": Written " << nwrite << " bytes to the network\n";
     }
 
     if(FD_ISSET(net_fd, &rd_set)) {
@@ -282,14 +269,12 @@ int connect_to_server(const std::string &ifname, const std::string &remote_ip) {
       /* read packet */
       nread = read_n(net_fd, buffer, ntohs(plength));
       do_debug("NET2TAP %lu: Read %d bytes from the network\n", net2tap, nread);
-      //std::cout << "TAP2NET "<< net2tap <<": Read " << nread << " bytes from the network\n";
 
       /* now buffer[] contains a full packet or frame, write it into the tun/tap interface */ 
       nwrite = cwrite(tap_fd, buffer, nread);
       do_debug("NET2TAP %lu: Written %d bytes to the tap interface\n", net2tap, nwrite);
-      //std::cout << "TAP2NET "<< net2tap <<": Written " << nwrite << " bytes to the tap interface\n";
     }
   }
-  
+    printf ("Simpletun terminated\n");
   return(0);
 }
