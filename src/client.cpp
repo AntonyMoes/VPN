@@ -21,7 +21,7 @@ extern int tap_fd;
 int connect_to_server(const std::string &ifname, const std::string &remote_ip);
 
 void create_tun(const std::string &vip) {
-    std::string syscall = "./tun.sh ";
+    std::string syscall = "./scripts/tun.sh ";
     syscall += tun_name;
     syscall += " ";
     syscall += vip;
@@ -29,7 +29,7 @@ void create_tun(const std::string &vip) {
 }
 
 void delete_tun() {
-    std::string syscall = "./tun_del.sh ";
+    std::string syscall = "./scripts/tun_del.sh ";
     syscall += tun_name;
     system(syscall.c_str());
 }

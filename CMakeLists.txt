@@ -3,5 +3,5 @@ project(dhcp_client)
 
 set(CMAKE_CXX_STANDARD 11)
 
-add_executable(dhcp_client main.cpp simpletun.cpp)
+add_executable(dhcp_client src/client.cpp src/simpletun.cpp)
 target_link_libraries(dhcp_client pthread)
