@@ -1,12 +1,8 @@
-//
-// Created by antonymo on 03.05.18.
-//
-
 #include <cstring>
 #include <netinet/in.h>
 #include <set>
-#include "../include/Network.h"
-#include "../include/rwr.hpp"
+#include "server/Network.h"
+#include "rwr.h"
 
 extern std::set<int> clients;
 

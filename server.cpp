@@ -1,6 +1,3 @@
-//
-// Created by antonymo on 03.05.18.
-//
 
 #include <sys/socket.h>
 #include <netinet/in.h>
@@ -22,16 +19,15 @@
 #include <thread>
 #include <set>
 
-#include "../include/rwr.hpp"
-#include "../include/dhcp_errors.h"
-#include "../include/Network.h"
+#include "rwr.h"
+#include "server/dhcp_errors.h"
+#include "server/Network.h"
+#include "client/simpletun.h"
 
 #define DHCP_BUFSIZE 4096
 #define BUFSIZE 20000
 #define DHCP_PORT 12345
 #define PORT 55555
-
-int debug = 1;
 
 int shut = false;
 
@@ -184,7 +180,7 @@ int main() {
         perror("bind()");
         exit(1);
     }
-    my_err((char*)"SERVER OPENED\n");
+    std::cerr << "SERVER OPENED" << std::endl;
     if (listen(sock_fd, 5) < 0) {
         perror("listen()");
         exit(1);
@@ -228,7 +224,7 @@ int main() {
                 perror("accept()");
                 exit(1);
             }
-            do_debug(debug, (char*)"SERVER: Client connected from %s\n", inet_ntoa(remote.sin_addr));
+            std::cerr << "SERVER: Client connected from " << inet_ntoa(remote.sin_addr) << std::endl;
 
             fcntl(net_fd, F_SETFL, O_NONBLOCK);
 
